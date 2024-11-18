@@ -1,0 +1,3 @@
+GET http://localhost:5158
+
+// ctrl + alt + r is a reliable way to execute this api call
