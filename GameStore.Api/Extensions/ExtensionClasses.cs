@@ -1,12 +1,9 @@
-using System;
 using GameStore.Api.Contracts;
 
 namespace GameStore.Api.ExtensionClasses;
 
 public static class ExtensionClasses
 {
-
-  string getGameEndpointName = "get-game-by-id";
 
   private static readonly List<GameContracts> gameContracts = [
     new (1, "The Legend of Zelda: Breath of the Wild", "Adventure", 59.99m, new DateOnly(2017, 3, 3)),
@@ -18,7 +15,50 @@ public static class ExtensionClasses
   new  (7, "Animal Crossing: New Horizons", "Simulation", 49.99m, new DateOnly(2020, 3, 20)),
   new  (8, "Super Mario Odyssey", "Platformer", 49.99m, new DateOnly(2017, 10, 27)),
 ];
-  public static RouteGroupBuilder MapGamesEndpoints(this WebApplication app)
+  public static WebApplicationBuilder AddSwaggerGenCustExt(this WebApplicationBuilder builder)
+  {
+    builder.Services.AddSwaggerGen(options =>
+  {
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+      Title = "My API",
+      Version = "v1",
+      Description = "API for managing resources.",
+      Contact = new Microsoft.OpenApi.Models.OpenApiContact
+      {
+        Name = "Ghatak Commando",
+      }
+    });
+
+    options.SwaggerDoc("v2", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+      Title = "My API",
+      Version = "v2",
+      Description = "API for managing resources.",
+      Contact = new Microsoft.OpenApi.Models.OpenApiContact
+      {
+        Name = "Para Commando",
+      }
+    });
+  });
+    return builder;
+  }
+  public static WebApplication UseSwaggerCustExt(this WebApplication app)
+  {
+    app.UseSwagger(options =>
+    {
+      options.RouteTemplate = "swagger/{documentName}/swagger.json";
+    });
+    app.UseSwaggerUI(c =>
+       {
+         c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API v1");
+         c.SwaggerEndpoint("/swagger/v2/swagger.json", "My API v2");
+         c.RoutePrefix = string.Empty; // Swagger at root
+       });
+    return app;
+  }
+
+  public static RouteGroupBuilder MapGamesEndpointsExt(this WebApplication app)
   {
     // return type of this method changed to RouteGroupBuilder from WebApplication because we used MapGroup
 
