@@ -1,5 +1,7 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace GameStore.Api.Contracts;
 
 public record class UpdateGameContract(
- string name, string genre, decimal price, DateOnly ReleaseDate
+ [Required][StringLength(50)] string name, [Required][StringLength(50)] string genre,[Range(0,100)]decimal price,  DateOnly ReleaseDate
 );

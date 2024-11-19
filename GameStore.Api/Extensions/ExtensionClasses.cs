@@ -5,6 +5,8 @@ namespace GameStore.Api.ExtensionClasses;
 public static class ExtensionClasses
 {
 
+  private static string getGameEndpointName = "get-game-by-id";
+
   private static readonly List<GameContracts> gameContracts = [
     new (1, "The Legend of Zelda: Breath of the Wild", "Adventure", 59.99m, new DateOnly(2017, 3, 3)),
   new (2, "Minecraft", "Sandbox", 26.95m, new DateOnly(2011, 11, 18)),
@@ -62,7 +64,7 @@ public static class ExtensionClasses
   {
     // return type of this method changed to RouteGroupBuilder from WebApplication because we used MapGroup
 
-    var group = app.MapGroup("games");
+    var group = app.MapGroup("games").WithParameterValidation();
     // below one can be app.MapGet but we wanted to append a route name hence we used MapGroup
     group.MapGet("/get-all-games", () =>
   {
@@ -74,8 +76,6 @@ public static class ExtensionClasses
     return Results.Ok(gameContracts);
   });
 
-    // Get game by ID
-    string getGameEndpointName = "get-game-by-id";
 
     group.MapGet("/get-game-by-id/{id}", (int id) =>
     {
@@ -94,10 +94,6 @@ public static class ExtensionClasses
     {
       try
       {
-        if (string.IsNullOrWhiteSpace(newGame.name) || string.IsNullOrWhiteSpace(newGame.genre))
-        {
-          return Results.BadRequest("Game name and genre are required."); // Return 400 if required fields are missing
-        }
 
         var game = new GameContracts(
         gameContracts.Count + 1,
@@ -116,7 +112,7 @@ public static class ExtensionClasses
       {
         return Results.Problem($"An error occurred while creating the game: {ex.Message}");
       }
-    });
+    })
 
     // Update an existing game
     group.MapPut("/update-game/{id}", (int id, UpdateGameContract updateGame) =>
