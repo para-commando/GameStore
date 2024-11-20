@@ -1,4 +1,6 @@
+using GameStore.Api.Data;
 using GameStore.Api.ExtensionClasses;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 // Register Swagger generator with proper grouping logic
@@ -6,6 +8,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers();
 // extension method
 builder.AddSwaggerGenCustExt();
+
+var sqliteConnectionString = builder.Configuration.GetConnectionString("GameStoreSqlite");
+builder.Services.AddSqlite<GameStoreContext> (sqliteConnectionString);
+builder.Services.AddSqlite<MigrationDbContext> (sqliteConnectionString);
 
 var app = builder.Build();
 
@@ -18,4 +24,5 @@ app.MapGamesEndpointsExt();
 app.MapGet("/status-check", () => "Hello, Commando");
 
 app.Run();
+
 

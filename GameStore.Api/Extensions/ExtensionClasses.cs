@@ -112,7 +112,7 @@ public static class ExtensionClasses
       {
         return Results.Problem($"An error occurred while creating the game: {ex.Message}");
       }
-    })
+    });
 
     // Update an existing game
     group.MapPut("/update-game/{id}", (int id, UpdateGameContract updateGame) =>
