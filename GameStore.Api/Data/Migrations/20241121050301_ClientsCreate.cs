@@ -2,16 +2,16 @@
 
 #nullable disable
 
-namespace GameStore.Api.Data.MigrationsV2
+namespace GameStore.Api.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class CustomInitialCreate : Migration
+    public partial class ClientsCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "Games",
+                name: "Clients",
                 columns: table => new
                 {
                     id = table.Column<int>(type: "INTEGER", nullable: false)
@@ -20,7 +20,7 @@ namespace GameStore.Api.Data.MigrationsV2
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Games", x => x.id);
+                    table.PrimaryKey("PK_Clients", x => x.id);
                 });
         }
 
@@ -28,7 +28,7 @@ namespace GameStore.Api.Data.MigrationsV2
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Games");
+                name: "Clients");
         }
     }
 }
