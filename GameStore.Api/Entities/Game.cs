@@ -10,7 +10,7 @@ public required string name { get; set; }
 
 public int genreId { get; set; }
 
-public Genre? Genre { get; set; }
+public Genre? genre { get; set; }
 
 public decimal price { get; set; }
 

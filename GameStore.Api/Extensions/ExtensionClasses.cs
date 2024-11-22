@@ -1,4 +1,7 @@
 using GameStore.Api.Contracts;
+using GameStore.Api.Data;
+using GameStore.Api.Entities;
+using GameStore.Api.Mappings;
 
 namespace GameStore.Api.ExtensionClasses;
 
@@ -90,23 +93,32 @@ public static class ExtensionClasses
     }).WithName(getGameEndpointName);
 
     // Create a new game
-    group.MapPost("/create-game", (CreateGameContract newGame) =>
+    group.MapPost("/create-game", (CreateGameContract newGame, GameStoreContext gameStoreDbContext) =>
     {
       try
       {
+        // an extension method is defined on CreateGameContract so that we can get the entity object matching db table schema so that db operations can be performed, as db op demands an entity object
+        Game game = newGame.ToEntity();
+        game.genre = gameStoreDbContext.Genre.Find(newGame.genreId);
 
-        var game = new GameContracts(
-        gameContracts.Count + 1,
-        newGame.name,
-        newGame.genre,
-        newGame.price,
-        newGame.ReleaseDate
-    );
+        // creating a record using entity, now this is no longer necessary as extension method is defined on CreateGameContract
+        // Game game = new()
+        // {
+        //   name = newGame.name,
+        //   genre = gameStoreDbContext.Genre.Find(newGame.genreId),
+        //   genreId = newGame.genreId,
+        //   price = newGame.price,
+        //   releaseDate = DateOnly.FromDateTime(DateTime.Now),
+        // };
+        // after creating record we need to add it to the dbContext
+        gameStoreDbContext.Games.Add(game);
+        // this will create and execute the changes made to the dbContext so far by creating corresponding sql and executing them
+        gameStoreDbContext.SaveChanges();
 
-        gameContracts.Add(game);
-
+      // this is no longer necessary as extension method defined on the Game entity "ToContract" does it for us behind the scenes
+      //  GameContracts gg = new(game.id, game.name, game.genre!.Name, game.price, game.releaseDate);
         // Return 201 Created with a "location" header pointing to the new game
-        return Results.CreatedAtRoute(getGameEndpointName, new { id = game.id }, game);
+        return Results.CreatedAtRoute(getGameEndpointName, new { id = game.id }, game.ToContract());
       }
       catch (Exception ex)
       {

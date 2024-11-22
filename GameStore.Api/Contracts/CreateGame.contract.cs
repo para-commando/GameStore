@@ -9,5 +9,5 @@ namespace GameStore.Api.Contracts;
 // note that this can even be added on group name initialization.
 public record class CreateGameContract
 (
-[Required][StringLength(50)] string name, [Required][StringLength(50)] string genre,[Range(0,100)]decimal price, DateOnly ReleaseDate
+[Required][StringLength(50)] string name, int genreId, [Required] string genre, [Range(0,100)]decimal price, DateOnly ReleaseDate
 );
