@@ -71,9 +71,9 @@ public static class ExtensionClasses
 
     var group = app.MapGroup("games").WithParameterValidation();
     // below one can be app.MapGet but we wanted to append a route name hence we used MapGroup
-    group.MapGet("/get-all-games", (GameStoreContext gameStoreDbContext) =>
+    group.MapGet("/get-all-games", async(GameStoreContext gameStoreDbContext) =>
   {
-   return gameStoreDbContext.Games.Include(game=> game.genre).Select(game => game.ToEntity()).AsNoTracking();
+   return await gameStoreDbContext.Games.Include(game=> game.genre).Select( game => game.ToEntity()).AsNoTracking().ToListAsync();
   //  added AsNoTracking as we are not going to update the above fetched data using db.save or any modifs will be made, hence to free up the efcore tracking of this data we used it
     // if (games == null || games.Count == 0)
     // {
@@ -84,10 +84,10 @@ public static class ExtensionClasses
   });
 
 
-    group.MapGet("/get-game-by-id/{id}", (int id, GameStoreContext gameStoreDbContext) =>
+    group.MapGet("/get-game-by-id/{id}", async(int id, GameStoreContext gameStoreDbContext) =>
     {
       // we can even use var as datatype
-      Game? game = gameStoreDbContext.Games.Find(id);
+      Game? game = await gameStoreDbContext.Games.FindAsync(id);
 
       if (game == null)
       {
@@ -104,13 +104,13 @@ public static class ExtensionClasses
     // The DI system resolves the dbContext and passes it as an argument when invoking the handler.
 
     // Create a new game
-    group.MapPost("/create-game", (CreateGameContract newGame, GameStoreContext gameStoreDbContext) =>
+    group.MapPost("/create-game", async(CreateGameContract newGame, GameStoreContext gameStoreDbContext) =>
     {
       try
       {
         // an extension method is defined on CreateGameContract so that we can get the entity object matching db table schema so that db operations can be performed, as db op demands an entity object
         Game game = newGame.ToEntity();
-        game.genre = gameStoreDbContext.Genre.Find(newGame.genreId);
+        game.genre = await gameStoreDbContext.Genre.FindAsync(newGame.genreId);
 
         // creating a record using entity, now this is no longer necessary as extension method is defined on CreateGameContract
         // Game game = new()
@@ -124,7 +124,7 @@ public static class ExtensionClasses
         // after creating record we need to add it to the dbContext
         gameStoreDbContext.Games.Add(game);
         // this will create and execute the changes made to the dbContext so far by creating corresponding sql and executing them
-        gameStoreDbContext.SaveChanges();
+        await gameStoreDbContext.SaveChangesAsync();
 
         // this is no longer necessary as extension method defined on the Game entity "ToCGameSummaryContracts" does it for us behind the scenes
         //  GameContracts gg = new(game.id, game.name, game.genre!.Name, game.price, game.releaseDate);
@@ -138,11 +138,11 @@ public static class ExtensionClasses
     });
 
     // Update an existing game
-    group.MapPut("/update-game/{id}", (int id, UpdateGameContract updateGame, GameStoreContext gameStoreDbContext) =>
+    group.MapPut("/update-game/{id}", async (int id, UpdateGameContract updateGame, GameStoreContext gameStoreDbContext) =>
     {
       try
       {
-        var existingGame = gameStoreDbContext.Games.Find(id);
+        var existingGame = await gameStoreDbContext.Games.FindAsync(id);
 
 
         if (existingGame is null)
@@ -150,7 +150,7 @@ public static class ExtensionClasses
           return Results.NotFound($"Game with ID {id} not found."); // Return 404 if the game is not found
         }
         gameStoreDbContext.Entry(existingGame).CurrentValues.SetValues(updateGame.ToUpdateGameDetailsContracts(id));
-        gameStoreDbContext.SaveChanges();
+        await gameStoreDbContext.SaveChangesAsync();
         return Results.NoContent(); // Return 204 if the update is successful
       }
       catch (Exception ex)
@@ -160,11 +160,11 @@ public static class ExtensionClasses
     });
 
     // Delete a game
-    group.MapDelete("/delete-game/{id}", (int id, GameStoreContext gameStoreDbContext) =>
+    group.MapDelete("/delete-game/{id}", async(int id, GameStoreContext gameStoreDbContext) =>
     {
       try
       {
-        var existingGame = gameStoreDbContext.Games.Find(id);
+        var existingGame = await gameStoreDbContext.Games.FindAsync(id);
 
 
         if (existingGame is null)
@@ -173,7 +173,7 @@ public static class ExtensionClasses
         // var removedCount = gameStoreDbContext.Remove(existingGame);
         // Console.WriteLine(removedCount);
         // gameStoreDbContext.SaveChanges();
-        gameStoreDbContext.Games.Where(game => game.id == id).ExecuteDelete();
+       await gameStoreDbContext.Games.Where(game => game.id == id).ExecuteDeleteAsync();
 
         return Results.NoContent(); // Return 204 if the delete is successful
       }
