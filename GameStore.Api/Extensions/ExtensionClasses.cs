@@ -83,7 +83,10 @@ public static class ExtensionClasses
     // return Results.Ok(games);
   });
 
-
+    group.MapGet("/get-all-genres", async(GameStoreContext gameStoreDbContext) =>
+  {
+   return await gameStoreDbContext.Genre.Select( genre => genre.ToContract()).AsNoTracking().ToListAsync();
+  });
     group.MapGet("/get-game-by-id/{id}", async(int id, GameStoreContext gameStoreDbContext) =>
     {
       // we can even use var as datatype

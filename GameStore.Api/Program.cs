@@ -22,7 +22,7 @@ app.UseSwaggerCustExt();
 app.MapGamesEndpointsExt();
 
 // look into these properly and time 2:20
-app.MigrateDbContextOne();
+await app.MigrateDbContextOne();
 // app.MigrateDbContextTwo();
 app.MapGet("/status-check", () => "Hello, Commando");
 
