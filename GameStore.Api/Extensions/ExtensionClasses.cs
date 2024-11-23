@@ -2,6 +2,7 @@ using GameStore.Api.Contracts;
 using GameStore.Api.Data;
 using GameStore.Api.Entities;
 using GameStore.Api.Mappings;
+using Microsoft.EntityFrameworkCore;
 
 namespace GameStore.Api.ExtensionClasses;
 
@@ -10,7 +11,8 @@ public static class ExtensionClasses
 
   private static string getGameEndpointName = "get-game-by-id";
 
-  private static readonly List<GameContracts> gameContracts = [
+// was used initially as database proxy
+  private static readonly List<GameSummaryContracts> gameContracts = [
     new (1, "The Legend of Zelda: Breath of the Wild", "Adventure", 59.99m, new DateOnly(2017, 3, 3)),
   new (2, "Minecraft", "Sandbox", 26.95m, new DateOnly(2011, 11, 18)),
   new  (3, "Halo Infinite", "Shooter", 69.99m, new DateOnly(2021, 12, 8)),
@@ -69,28 +71,37 @@ public static class ExtensionClasses
 
     var group = app.MapGroup("games").WithParameterValidation();
     // below one can be app.MapGet but we wanted to append a route name hence we used MapGroup
-    group.MapGet("/get-all-games", () =>
+    group.MapGet("/get-all-games", (GameStoreContext gameStoreDbContext) =>
   {
-    if (gameContracts == null || gameContracts.Count == 0)
-    {
-      return Results.NotFound("No games found."); // Return 404 if no games exist
-    }
+   return gameStoreDbContext.Games.Include(game=> game.genre).Select(game => game.ToEntity()).AsNoTracking();
+  //  added AsNoTracking as we are not going to update the above fetched data using db.save or any modifs will be made, hence to free up the efcore tracking of this data we used it
+    // if (games == null || games.Count == 0)
+    // {
+    //   return Results.NotFound("No games found."); // Return 404 if no games exist
+    // }
 
-    return Results.Ok(gameContracts);
+    // return Results.Ok(games);
   });
 
 
-    group.MapGet("/get-game-by-id/{id}", (int id) =>
+    group.MapGet("/get-game-by-id/{id}", (int id, GameStoreContext gameStoreDbContext) =>
     {
-      var game = gameContracts.Find(g => g.id == id);
+      // we can even use var as datatype
+      Game? game = gameStoreDbContext.Games.Find(id);
 
       if (game == null)
       {
         return Results.NotFound($"Game with ID {id} not found."); // Return 404 if the game is not found
       }
 
-      return Results.Ok(game); // Return 200 OK with the game data
+      return Results.Ok(game.ToCGameDetailsContracts()); // Return 200 OK with the game data
     }).WithName(getGameEndpointName);
+
+
+    // When you define a parameter like GameStoreContext gameStoreDbContext in your handler, ASP.NET Core uses constructor injection to provide an instance of GameStoreContext automatically.
+    // For this to work:
+    // The GameStoreContext needs to be registered in the DI container, typically in the Program.cs file.
+    // The DI system resolves the dbContext and passes it as an argument when invoking the handler.
 
     // Create a new game
     group.MapPost("/create-game", (CreateGameContract newGame, GameStoreContext gameStoreDbContext) =>
@@ -115,10 +126,10 @@ public static class ExtensionClasses
         // this will create and execute the changes made to the dbContext so far by creating corresponding sql and executing them
         gameStoreDbContext.SaveChanges();
 
-      // this is no longer necessary as extension method defined on the Game entity "ToContract" does it for us behind the scenes
-      //  GameContracts gg = new(game.id, game.name, game.genre!.Name, game.price, game.releaseDate);
+        // this is no longer necessary as extension method defined on the Game entity "ToCGameSummaryContracts" does it for us behind the scenes
+        //  GameContracts gg = new(game.id, game.name, game.genre!.Name, game.price, game.releaseDate);
         // Return 201 Created with a "location" header pointing to the new game
-        return Results.CreatedAtRoute(getGameEndpointName, new { id = game.id }, game.ToContract());
+        return Results.CreatedAtRoute(getGameEndpointName, new { id = game.id }, game.ToEntity());
       }
       catch (Exception ex)
       {
@@ -127,27 +138,19 @@ public static class ExtensionClasses
     });
 
     // Update an existing game
-    group.MapPut("/update-game/{id}", (int id, UpdateGameContract updateGame) =>
+    group.MapPut("/update-game/{id}", (int id, UpdateGameContract updateGame, GameStoreContext gameStoreDbContext) =>
     {
       try
       {
-        int gameIndex = gameContracts.FindIndex(game => game.id == id);
+        var existingGame = gameStoreDbContext.Games.Find(id);
 
-        if (gameIndex == -1)
+
+        if (existingGame is null)
         {
           return Results.NotFound($"Game with ID {id} not found."); // Return 404 if the game is not found
         }
-
-        var updatedGame = new GameContracts(
-        id,
-        updateGame.name,
-        updateGame.genre,
-        updateGame.price,
-        updateGame.ReleaseDate
-    );
-
-        gameContracts[gameIndex] = updatedGame;
-
+        gameStoreDbContext.Entry(existingGame).CurrentValues.SetValues(updateGame.ToUpdateGameDetailsContracts(id));
+        gameStoreDbContext.SaveChanges();
         return Results.NoContent(); // Return 204 if the update is successful
       }
       catch (Exception ex)
@@ -157,16 +160,20 @@ public static class ExtensionClasses
     });
 
     // Delete a game
-    group.MapDelete("/delete-game/{id}", (int id) =>
+    group.MapDelete("/delete-game/{id}", (int id, GameStoreContext gameStoreDbContext) =>
     {
       try
       {
-        int removedCount = gameContracts.RemoveAll(game => game.id == id);
+        var existingGame = gameStoreDbContext.Games.Find(id);
 
-        if (removedCount == 0)
-        {
-          return Results.NotFound($"Game with ID {id} not found."); // Return 404 if no game was deleted
-        }
+
+        if (existingGame is null)
+        { return Results.NotFound("game not found"); }
+
+        // var removedCount = gameStoreDbContext.Remove(existingGame);
+        // Console.WriteLine(removedCount);
+        // gameStoreDbContext.SaveChanges();
+        gameStoreDbContext.Games.Where(game => game.id == id).ExecuteDelete();
 
         return Results.NoContent(); // Return 204 if the delete is successful
       }

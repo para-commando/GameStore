@@ -27,3 +27,4 @@ app.MigrateDbContextOne();
 app.MapGet("/status-check", () => "Hello, Commando");
 
 app.Run();
+
